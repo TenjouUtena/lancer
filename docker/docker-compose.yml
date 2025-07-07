@@ -1,0 +1,129 @@
+# Docker Compose for local development
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: lancer-postgres
+    environment:
+      POSTGRES_DB: lancer
+      POSTGRES_USER: lanceruser
+      POSTGRES_PASSWORD: lancerpass123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - lancer-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lanceruser -d lancer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # .NET API
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: lancer-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=lancer;Username=lanceruser;Password=lancerpass123
+      - CORS__AllowedOrigins=http://localhost:3000
+    ports:
+      - "5223:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lancer-network
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/swagger"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5223/api/
+    container_name: lancer-frontend
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:5223/api/
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - lancer-network
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+      - /app/.next
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: lancer-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - lancer-network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # pgAdmin for database management (development only)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: lancer-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@lancer.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    networks:
+      - lancer-network
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  lancer-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
