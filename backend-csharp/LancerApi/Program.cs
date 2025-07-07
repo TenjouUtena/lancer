@@ -7,6 +7,14 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+// Add controllers
+builder.Services.AddControllers();
+
+// Add Swagger services
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+
 // Add DbContext
 builder.Services.AddDbContext<LancerDbContext>(options =>
     options.UseSqlite("Data Source=lancer.db"));
@@ -27,12 +35,17 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.UseSwagger();
+    app.UseSwaggerUI();
     app.MapOpenApi();
 }
 
 app.UseCors("AllowAll");
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // Create database if it doesn't exist
 using (var scope = app.Services.CreateScope())
@@ -40,5 +53,8 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<LancerDbContext>();
     dbContext.Database.EnsureCreated();
 }
+
+// Map controllers
+app.MapControllers();
 
 app.Run();

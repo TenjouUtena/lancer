@@ -7,7 +7,7 @@ export function NewArtist(props) {
     const [formData, setFormData] = useState({name: 'New Artist', faname: '', platform: ''})
 
     const make_new = (e) => {
-       fetch("http://127.0.0.1:5000/api/artists", {method:'PUT',
+       fetch(`${process.env.NEXT_PUBLIC_API_URL}artists`, {method:'PUT',
                                                     headers:{
                                                         'Content-type':'application/json', 
                                                             'Accept':'application/json'},

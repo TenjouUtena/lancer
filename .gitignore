@@ -49,3 +49,6 @@ bin/
 obj/
 *.zip
 
+backend-csharp/LancerApi/lancer.db-shm
+
+backend-csharp/LancerApi/lancer.db-wal

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 export const ArtistList = () => {
     const [value, setValue] = useState([]);
     const refresh = () => {
-        fetch('http://127.0.0.1:5000/api/' + 'artists/top_5')
+        fetch( process.env.NEXT_PUBLIC_API_URL+ 'artists/top_5')
         .then(async resp => {
             setValue(await resp.json());
         })
