@@ -19,6 +19,9 @@ namespace LancerApi.Models
         public string Name { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        
+        // Navigation property for tags
+        public virtual ICollection<ArtistBaseTag> Tags { get; set; } = new List<ArtistBaseTag>();
     }
 
     public class ArtistBaseTagSet

@@ -1,22 +1,202 @@
-import { useState } from "react";
+'use client'
 
+import { useState, useEffect } from "react";
+import { ArtistBaseManager } from "./artistbase.js";
 
+export const ArtistEdit = ({ artist, onClose }) => {
+    const [formData, setFormData] = useState({
+        id: 0,
+        name: '',
+        faname: '',
+        platform: ''
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [hasChanges, setHasChanges] = useState(false);
 
+    useEffect(() => {
+        if (artist) {
+            setFormData({
+                id: artist.id,
+                name: artist.name || '',
+                faname: artist.faname || '',
+                platform: artist.platform || ''
+            });
+        }
+    }, [artist]);
 
-export const ArtistEdit = (props) => {
-    const [formData, setFormData] = useState(props.artist)
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.id]: e.target.value });
+        const newFormData = { ...formData, [e.target.name]: e.target.value };
+        setFormData(newFormData);
+        
+        // Check if there are changes
+        const hasChanges = 
+            newFormData.name !== (artist.name || '') ||
+            newFormData.faname !== (artist.faname || '') ||
+            newFormData.platform !== (artist.platform || '');
+        setHasChanges(hasChanges);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!formData.name.trim()) {
+            setError('Name is required');
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}artists/${formData.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update artist');
+            }
+
+            onClose(); // Close modal and refresh parent list
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCancel = () => {
+        onClose();
+    };
+
+    if (!artist) {
+        return null;
     }
 
+    return (
+        <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Edit Artist</h2>
+                    <p className="text-sm text-gray-500 mt-1">ID: #{artist.id}</p>
+                </div>
+                <button
+                    onClick={handleCancel}
+                    className="text-gray-400 hover:text-gray-600 transition-colors duration-150"
+                >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                    <div className="flex items-center">
+                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                        {error}
+                    </div>
+                </div>
+            )}
 
-    return ( <div>
-        <p>Name: <input className="text-gray-600" onChange={handleChange} id='name' value={formData.name}></input></p>
-        <p>FA Name: <input className="text-gray-600" onChange={handleChange} id='faname' value={formData.faname} /></p>
-        <p>Platform: <input className="text-gray-600" onChange={handleChange} id='platform' value={formData.platform} /></p>
-        <p/>
-        <p>Artist Bases:</p>
+            <div className="space-y-4">
+                {/* Artist Basic Info Section */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                                Artist Name *
+                            </label>
+                            <input
+                                type="text"
+                                id="name"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                required
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                                placeholder="Enter artist name"
+                            />
+                        </div>
 
-    </div> );
-}
+                        <div>
+                            <label htmlFor="faname" className="block text-sm font-medium text-gray-700 mb-2">
+                                FurAffinity Name
+                            </label>
+                            <input
+                                type="text"
+                                id="faname"
+                                name="faname"
+                                value={formData.faname}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                                placeholder="Enter FurAffinity username"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="platform" className="block text-sm font-medium text-gray-700 mb-2">
+                                Platform
+                            </label>
+                            <select
+                                id="platform"
+                                name="platform"
+                                value={formData.platform}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                            >
+                                <option value="">Select a platform</option>
+                                <option value="FurAffinity">FurAffinity</option>
+                                <option value="Twitter">Twitter</option>
+                                <option value="Instagram">Instagram</option>
+                                <option value="DeviantArt">DeviantArt</option>
+                                <option value="Artstation">Artstation</option>
+                                <option value="Patreon">Patreon</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-4">
+                            <button
+                                type="submit"
+                                disabled={loading || !hasChanges}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {loading && (
+                                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                )}
+                                {loading ? 'Updating...' : hasChanges ? 'Update Artist' : 'No Changes'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                {/* Artist Bases Section */}
+                <div className="border-t pt-4 mt-6">
+                    <ArtistBaseManager artistId={artist.id} />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                    <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-150"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
