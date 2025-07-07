@@ -1,1 +1,97 @@
-# Lancer API - C# ASP.NET Core\n\n## Overview\n\nThis is the C# ASP.NET Core version of the Lancer backend, converted from the original Python Flask implementation.\n\n## Features\n\n- ASP.NET Core Web API\n- Entity Framework Core with SQLite\n- CORS enabled for cross-origin requests\n- RESTful API endpoints matching the original Flask API\n\n## API Endpoints\n\n### Orders\n- `GET /api/orders/top_5` - Get the last 5 orders\n\n### Artists\n- `GET /api/artists/top_5` - Get the top 5 artists\n- `PUT /api/artists` - Create a new artist\n\n## Setup and Running\n\n### Prerequisites\n- .NET 9.0 SDK or later\n\n### Installation\n\n1. Navigate to the project directory:\n   ```bash\n   cd backend-csharp/LancerApi\n   ```\n\n2. Restore dependencies:\n   ```bash\n   dotnet restore\n   ```\n\n3. Build the project:\n   ```bash\n   dotnet build\n   ```\n\n4. Run the application:\n   ```bash\n   dotnet run\n   ```\n\nThe API will be available at `http://localhost:5223`\n\n## Database\n\nThe application uses SQLite with Entity Framework Core. The database file `lancer.db` will be created automatically in the project directory when the application starts.\n\n## CORS\n\nCORS is configured to allow requests from any origin, method, and header.\n\n## Models\n\nThe data models match the original Python models:\n- ContactType\n- Image\n- Artist\n- ArtistBase\n- ArtistBaseTagSet\n- ArtistBaseTag\n- Customer\n- CustomerImage\n- Product\n- Order\n- OrderLine\n\n## Development\n\nTo add new endpoints or modify existing ones, edit the controller files in the `Controllers` directory.\n\n## Testing\n\nYou can test the API using tools like Postman, curl, or by integrating with the frontend application.\n\n## Migration from Python Flask\n\nThis C# version maintains the same API contract as the original Python Flask backend, making it a drop-in replacement for the frontend.\n\n## License\n\n[Add your license information here]\n\n## Contributing\n\n[Add contributing guidelines here]\n\n## Support\n\nFor issues or questions, please [contact information or issue tracker]."
+# Lancer API - C# ASP.NET Core
+
+## Overview
+
+This is the C# ASP.NET Core version of the Lancer backend, converted from the original Python Flask implementation.
+
+## Features
+
+- ASP.NET Core Web API
+- Entity Framework Core with SQLite
+- CORS enabled for cross-origin requests
+- RESTful API endpoints matching the original Flask API
+
+## API Endpoints
+
+### Orders
+- `GET /api/orders/top_5` - Get the last 5 orders
+
+### Artists
+- `GET /api/artists/top_5` - Get the top 5 artists
+- `PUT /api/artists` - Create a new artist
+
+## Setup and Running
+
+### Prerequisites
+- .NET 9.0 SDK or later
+
+### Installation
+
+1. Navigate to the project directory:
+   ```bash
+   cd backend-csharp/LancerApi
+   ```
+
+2. Restore dependencies:
+   ```bash
+   dotnet restore
+   ```
+
+3. Build the project:
+   ```bash
+   dotnet build
+   ```
+
+4. Run the application:
+   ```bash
+   dotnet run
+   ```
+
+The API will be available at `http://localhost:5223`
+
+## Database
+
+The application uses SQLite with Entity Framework Core. The database file `lancer.db` will be created automatically in the project directory when the application starts.
+
+## CORS
+
+CORS is configured to allow requests from any origin, method, and header.
+
+## Models
+
+The data models match the original Python models:
+- ContactType
+- Image
+- Artist
+- ArtistBase
+- ArtistBaseTagSet
+- ArtistBaseTag
+- Customer
+- CustomerImage
+- Product
+- Order
+- OrderLine
+
+## Development
+
+To add new endpoints or modify existing ones, edit the controller files in the `Controllers` directory.
+
+## Testing
+
+You can test the API using tools like Postman, curl, or by integrating with the frontend application.
+
+## Migration from Python Flask
+
+This C# version maintains the same API contract as the original Python Flask backend, making it a drop-in replacement for the frontend.
+
+## License
+
+[Add your license information here]
+
+## Contributing
+
+[Add contributing guidelines here]
+
+## Support
+
+For issues or questions, please [contact information or issue tracker]."
