@@ -27,9 +27,15 @@ namespace LancerApi.Models
         public string Url { get; set; } = string.Empty;
         public decimal Price { get; set; }
         
-        // New fields from data dictionary
+        // PSD file storage - URLs for backward compatibility
         public string OriginalPsdUrl { get; set; } = string.Empty; // Storage for original PSD
         public string ModifiedPsdUrl { get; set; } = string.Empty; // Storage for modified PSD
+        
+        // PSD file metadata
+        public string OriginalPsdFileName { get; set; } = string.Empty;
+        public long OriginalPsdFileSize { get; set; }
+        public string ModifiedPsdFileName { get; set; } = string.Empty;
+        public long ModifiedPsdFileSize { get; set; }
         
         // User ownership
         public string UserId { get; set; } = string.Empty;

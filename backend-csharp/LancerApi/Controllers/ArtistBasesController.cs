@@ -109,37 +109,53 @@ namespace LancerApi.Controllers
             }
 
             var userId = GetCurrentUserId();
+            var config = HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+            var maxImageSize = config.GetValue<long>("FileUpload:MaxFileSizeBytes");
+            var maxPsdSize = config.GetValue<long>("FileUpload:MaxPsdFileSizeBytes");
+            
             string? imageUrl = null;
+            string originalPsdUrl = string.Empty;
+            string modifiedPsdUrl = string.Empty;
+            string originalPsdFileName = string.Empty;
+            long originalPsdFileSize = 0;
+            string modifiedPsdFileName = string.Empty;
+            long modifiedPsdFileSize = 0;
 
-            // Handle file upload if provided
+            // Handle image file upload if provided
             if (model.ImageFile != null && model.ImageFile.Length > 0)
             {
-                // Validate file type
-                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-                var fileExtension = Path.GetExtension(model.ImageFile.FileName).ToLowerInvariant();
-                
-                if (!allowedExtensions.Contains(fileExtension))
+                var validationResult = await ValidateAndUploadImageFile(model.ImageFile, userId, maxImageSize);
+                if (validationResult.Error != null)
                 {
-                    return BadRequest("Invalid file type. Only image files are allowed.");
+                    return BadRequest(validationResult.Error);
                 }
+                imageUrl = validationResult.Url;
+            }
 
-                // Validate file size (max 10MB)
-                if (model.ImageFile.Length > 10 * 1024 * 1024)
+            // Handle original PSD file upload if provided
+            if (model.OriginalPsdFile != null && model.OriginalPsdFile.Length > 0)
+            {
+                var validationResult = await ValidateAndUploadPsdFile(model.OriginalPsdFile, userId, maxPsdSize);
+                if (validationResult.Error != null)
                 {
-                    return BadRequest("File size too large. Maximum size is 10MB.");
+                    return BadRequest(validationResult.Error);
                 }
+                originalPsdUrl = validationResult.Url!;
+                originalPsdFileName = model.OriginalPsdFile.FileName;
+                originalPsdFileSize = model.OriginalPsdFile.Length;
+            }
 
-                // Generate unique key
-                var key = $"user/{userId}/{Guid.NewGuid()}{fileExtension}";
-
-                // Upload to S3
-                using (var stream = model.ImageFile.OpenReadStream())
+            // Handle modified PSD file upload if provided
+            if (model.ModifiedPsdFile != null && model.ModifiedPsdFile.Length > 0)
+            {
+                var validationResult = await ValidateAndUploadPsdFile(model.ModifiedPsdFile, userId, maxPsdSize);
+                if (validationResult.Error != null)
                 {
-                    await _s3Service.UploadFileAsync(stream, key);
+                    return BadRequest(validationResult.Error);
                 }
-
-                // Set the URL to S3 key with prefix
-                imageUrl = $"s3:{key}";
+                modifiedPsdUrl = validationResult.Url!;
+                modifiedPsdFileName = model.ModifiedPsdFile.FileName;
+                modifiedPsdFileSize = model.ModifiedPsdFile.Length;
             }
 
             // Create the artist base
@@ -148,6 +164,12 @@ namespace LancerApi.Controllers
                 Name = model.Name,
                 Url = imageUrl ?? model.Url ?? string.Empty,
                 Price = model.Price,
+                OriginalPsdUrl = originalPsdUrl ?? model.OriginalPsdUrl ?? string.Empty,
+                ModifiedPsdUrl = modifiedPsdUrl ?? model.ModifiedPsdUrl ?? string.Empty,
+                OriginalPsdFileName = originalPsdFileName,
+                OriginalPsdFileSize = originalPsdFileSize,
+                ModifiedPsdFileName = modifiedPsdFileName,
+                ModifiedPsdFileSize = modifiedPsdFileSize,
                 UserId = userId
             };
 
@@ -222,6 +244,10 @@ namespace LancerApi.Controllers
             }
 
             var userId = GetCurrentUserId();
+            var config = HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+            var maxImageSize = config.GetValue<long>("FileUpload:MaxFileSizeBytes");
+            var maxPsdSize = config.GetValue<long>("FileUpload:MaxPsdFileSizeBytes");
+            
             var existingArtistBase = await _context.ArtistBases
                 .FirstOrDefaultAsync(ab => ab.Id == id && ab.UserId == userId);
             if (existingArtistBase == null)
@@ -230,45 +256,79 @@ namespace LancerApi.Controllers
             }
 
             string? imageUrl = existingArtistBase.Url;
+            string originalPsdUrl = existingArtistBase.OriginalPsdUrl;
+            string modifiedPsdUrl = existingArtistBase.ModifiedPsdUrl;
+            string originalPsdFileName = existingArtistBase.OriginalPsdFileName;
+            long originalPsdFileSize = existingArtistBase.OriginalPsdFileSize;
+            string modifiedPsdFileName = existingArtistBase.ModifiedPsdFileName;
+            long modifiedPsdFileSize = existingArtistBase.ModifiedPsdFileSize;
 
-            // Handle file upload if provided
+            // Handle image file upload if provided
             if (model.ImageFile != null && model.ImageFile.Length > 0)
             {
-                // Validate file type
-                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-                var fileExtension = Path.GetExtension(model.ImageFile.FileName).ToLowerInvariant();
+                var validationResult = await ValidateAndUploadImageFile(model.ImageFile, userId, maxImageSize);
+                if (validationResult.Error != null)
+                {
+                    return BadRequest(validationResult.Error);
+                }
                 
-                if (!allowedExtensions.Contains(fileExtension))
-                {
-                    return BadRequest("Invalid file type. Only image files are allowed.");
-                }
-
-                // Validate file size (max 10MB)
-                if (model.ImageFile.Length > 10 * 1024 * 1024)
-                {
-                    return BadRequest("File size too large. Maximum size is 10MB.");
-                }
-
-                // Delete old file if exists
+                // Delete old image file if exists
                 await DeleteOldImage(existingArtistBase.Url);
+                imageUrl = validationResult.Url;
+            }
 
-                // Generate unique key
-                var key = $"user/{userId}/{Guid.NewGuid()}{fileExtension}";
-
-                // Upload to S3
-                using (var stream = model.ImageFile.OpenReadStream())
+            // Handle original PSD file upload if provided
+            if (model.OriginalPsdFile != null && model.OriginalPsdFile.Length > 0)
+            {
+                var validationResult = await ValidateAndUploadPsdFile(model.OriginalPsdFile, userId, maxPsdSize);
+                if (validationResult.Error != null)
                 {
-                    await _s3Service.UploadFileAsync(stream, key);
+                    return BadRequest(validationResult.Error);
                 }
+                
+                // Delete old original PSD file if exists
+                if (!string.IsNullOrEmpty(existingArtistBase.OriginalPsdUrl) && existingArtistBase.OriginalPsdUrl.StartsWith("s3:"))
+                {
+                    var oldKey = existingArtistBase.OriginalPsdUrl.Substring(3);
+                    await _s3Service.DeleteFileAsync(oldKey);
+                }
+                
+                originalPsdUrl = validationResult.Url!;
+                originalPsdFileName = model.OriginalPsdFile.FileName;
+                originalPsdFileSize = model.OriginalPsdFile.Length;
+            }
 
-                // Set the URL to S3 key with prefix
-                imageUrl = $"s3:{key}";
+            // Handle modified PSD file upload if provided
+            if (model.ModifiedPsdFile != null && model.ModifiedPsdFile.Length > 0)
+            {
+                var validationResult = await ValidateAndUploadPsdFile(model.ModifiedPsdFile, userId, maxPsdSize);
+                if (validationResult.Error != null)
+                {
+                    return BadRequest(validationResult.Error);
+                }
+                
+                // Delete old modified PSD file if exists
+                if (!string.IsNullOrEmpty(existingArtistBase.ModifiedPsdUrl) && existingArtistBase.ModifiedPsdUrl.StartsWith("s3:"))
+                {
+                    var oldKey = existingArtistBase.ModifiedPsdUrl.Substring(3);
+                    await _s3Service.DeleteFileAsync(oldKey);
+                }
+                
+                modifiedPsdUrl = validationResult.Url!;
+                modifiedPsdFileName = model.ModifiedPsdFile.FileName;
+                modifiedPsdFileSize = model.ModifiedPsdFile.Length;
             }
 
             // Update the artist base
             existingArtistBase.Name = model.Name;
             existingArtistBase.Url = imageUrl ?? model.Url ?? existingArtistBase.Url;
             existingArtistBase.Price = model.Price;
+            existingArtistBase.OriginalPsdUrl = originalPsdUrl ?? model.OriginalPsdUrl ?? existingArtistBase.OriginalPsdUrl;
+            existingArtistBase.ModifiedPsdUrl = modifiedPsdUrl ?? model.ModifiedPsdUrl ?? existingArtistBase.ModifiedPsdUrl;
+            existingArtistBase.OriginalPsdFileName = originalPsdFileName;
+            existingArtistBase.OriginalPsdFileSize = originalPsdFileSize;
+            existingArtistBase.ModifiedPsdFileName = modifiedPsdFileName;
+            existingArtistBase.ModifiedPsdFileSize = modifiedPsdFileSize;
 
             // Update tags if provided
             if (model.TagIds != null)
@@ -318,8 +378,9 @@ namespace LancerApi.Controllers
                 return NotFound();
             }
 
-            // Delete associated file if exists
+            // Delete associated files if they exist
             await DeleteOldImage(artistBase.Url);
+            await DeletePsdFiles(artistBase.OriginalPsdUrl, artistBase.ModifiedPsdUrl);
 
             _context.ArtistBases.Remove(artistBase);
             await _context.SaveChangesAsync();
@@ -360,6 +421,77 @@ namespace LancerApi.Controllers
         {
             return _context.ArtistBases.Any(e => e.Id == id && e.UserId == userId);
         }
+
+        private async Task<FileUploadResult> ValidateAndUploadImageFile(IFormFile file, string userId, long maxSize)
+        {
+            var config = HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+            var allowedExtensions = config.GetSection("FileUpload:AllowedImageExtensions").Get<string[]>() ?? 
+                                  new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                return new FileUploadResult { Error = "Invalid file type. Only image files are allowed." };
+            }
+
+            if (file.Length > maxSize)
+            {
+                return new FileUploadResult { Error = $"File size too large. Maximum size is {maxSize / (1024 * 1024)}MB." };
+            }
+
+            var key = $"user/{userId}/images/{Guid.NewGuid()}{fileExtension}";
+
+            using (var stream = file.OpenReadStream())
+            {
+                await _s3Service.UploadFileAsync(stream, key);
+            }
+
+            return new FileUploadResult { Url = $"s3:{key}" };
+        }
+
+        private async Task<FileUploadResult> ValidateAndUploadPsdFile(IFormFile file, string userId, long maxSize)
+        {
+            var config = HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+            var allowedExtensions = config.GetSection("FileUpload:AllowedPsdExtensions").Get<string[]>() ?? 
+                                  new[] { ".psd" };
+            
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                return new FileUploadResult { Error = "Invalid file type. Only PSD files are allowed." };
+            }
+
+            if (file.Length > maxSize)
+            {
+                return new FileUploadResult { Error = $"File size too large. Maximum size is {maxSize / (1024 * 1024)}MB." };
+            }
+
+            var key = $"user/{userId}/psd/{Guid.NewGuid()}{fileExtension}";
+
+            using (var stream = file.OpenReadStream())
+            {
+                await _s3Service.UploadPsdFileAsync(stream, key, file.FileName);
+            }
+
+            return new FileUploadResult { Url = $"s3:{key}" };
+        }
+
+        private async Task DeletePsdFiles(string originalPsdUrl, string modifiedPsdUrl)
+        {
+            if (!string.IsNullOrEmpty(originalPsdUrl) && originalPsdUrl.StartsWith("s3:"))
+            {
+                var key = originalPsdUrl.Substring(3);
+                await _s3Service.DeleteFileAsync(key);
+            }
+
+            if (!string.IsNullOrEmpty(modifiedPsdUrl) && modifiedPsdUrl.StartsWith("s3:"))
+            {
+                var key = modifiedPsdUrl.Substring(3);
+                await _s3Service.DeleteFileAsync(key);
+            }
+        }
     }
 
     public class ArtistBaseUploadModel
@@ -368,6 +500,10 @@ namespace LancerApi.Controllers
         public string? Url { get; set; }
         public decimal Price { get; set; }
         public IFormFile? ImageFile { get; set; }
+        public IFormFile? OriginalPsdFile { get; set; }
+        public IFormFile? ModifiedPsdFile { get; set; }
+        public string? OriginalPsdUrl { get; set; }
+        public string? ModifiedPsdUrl { get; set; }
         public List<int> TagIds { get; set; } = new List<int>();
     }
 
@@ -378,5 +514,11 @@ namespace LancerApi.Controllers
         public string Url { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public List<ArtistBaseTagSet> Tags { get; set; } = new List<ArtistBaseTagSet>();
+    }
+
+    public class FileUploadResult
+    {
+        public string? Url { get; set; }
+        public string? Error { get; set; }
     }
 }

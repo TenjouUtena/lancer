@@ -202,6 +202,8 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+    const [originalPsdFile, setOriginalPsdFile] = useState(null);
+    const [modifiedPsdFile, setModifiedPsdFile] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [availableTags, setAvailableTags] = useState([]);
@@ -286,8 +288,17 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
                 formDataToSend.append('tagIds', tagId.toString());
             });
             
+            // Add files
             if (imageFile) {
                 formDataToSend.append('imageFile', imageFile);
+            }
+            
+            if (originalPsdFile) {
+                formDataToSend.append('originalPsdFile', originalPsdFile);
+            }
+            
+            if (modifiedPsdFile) {
+                formDataToSend.append('modifiedPsdFile', modifiedPsdFile);
             }
 
             if (artistBase) {
@@ -397,39 +408,105 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
                     />
                 </div>
 
-                {/* PSD Storage Fields */}
-                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">PSD Storage</h4>
+                {/* PSD File Upload Section */}
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">PSD Files</h4>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
                         <div>
-                            <label htmlFor="originalPsdUrl" className="block text-sm font-medium text-gray-700 mb-2">
-                                Original PSD URL
+                            <label htmlFor="originalPsdFile" className="block text-sm font-medium text-gray-700 mb-2">
+                                Original PSD File
                             </label>
                             <input
-                                type="url"
-                                id="originalPsdUrl"
-                                name="originalPsdUrl"
-                                value={formData.originalPsdUrl}
-                                onChange={handleChange}
+                                type="file"
+                                id="originalPsdFile"
+                                accept=".psd"
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    setOriginalPsdFile(file);
+                                }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
-                                placeholder="https://example.com/original.psd"
                             />
+                            {originalPsdFile && (
+                                <div className="mt-2 text-sm text-gray-600">
+                                    <div className="flex items-center gap-2">
+                                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <span>{originalPsdFile.name}</span>
+                                        <span className="text-gray-500">({(originalPsdFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                                    </div>
+                                </div>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">
+                                Upload your original PSD file. Max size: 100MB
+                            </p>
                         </div>
                         
                         <div>
-                            <label htmlFor="modifiedPsdUrl" className="block text-sm font-medium text-gray-700 mb-2">
-                                Modified PSD URL
+                            <label htmlFor="modifiedPsdFile" className="block text-sm font-medium text-gray-700 mb-2">
+                                Modified PSD File
                             </label>
                             <input
-                                type="url"
-                                id="modifiedPsdUrl"
-                                name="modifiedPsdUrl"
-                                value={formData.modifiedPsdUrl}
-                                onChange={handleChange}
+                                type="file"
+                                id="modifiedPsdFile"
+                                accept=".psd"
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    setModifiedPsdFile(file);
+                                }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
-                                placeholder="https://example.com/modified.psd"
                             />
+                            {modifiedPsdFile && (
+                                <div className="mt-2 text-sm text-gray-600">
+                                    <div className="flex items-center gap-2">
+                                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <span>{modifiedPsdFile.name}</span>
+                                        <span className="text-gray-500">({(modifiedPsdFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                                    </div>
+                                </div>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">
+                                Upload your modified PSD file. Max size: 100MB
+                            </p>
+                        </div>
+
+                        {/* Fallback URL inputs for backward compatibility */}
+                        <div className="border-t pt-4">
+                            <h5 className="text-sm font-medium text-gray-700 mb-3">Or use URLs (legacy)</h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="originalPsdUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                                        Original PSD URL
+                                    </label>
+                                    <input
+                                        type="url"
+                                        id="originalPsdUrl"
+                                        name="originalPsdUrl"
+                                        value={formData.originalPsdUrl}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                                        placeholder="https://example.com/original.psd"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label htmlFor="modifiedPsdUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                                        Modified PSD URL
+                                    </label>
+                                    <input
+                                        type="url"
+                                        id="modifiedPsdUrl"
+                                        name="modifiedPsdUrl"
+                                        value={formData.modifiedPsdUrl}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                                        placeholder="https://example.com/modified.psd"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

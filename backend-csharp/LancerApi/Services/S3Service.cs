@@ -17,13 +17,33 @@ namespace LancerApi.Services
             _bucketName = configuration["AWS:S3BucketName"];
         }
 
-        public async Task<string> UploadFileAsync(Stream fileStream, string key)
+        public async Task<string> UploadFileAsync(Stream fileStream, string key, string? contentType = null)
         {
             var putRequest = new PutObjectRequest
             {
                 BucketName = _bucketName,
                 Key = key,
-                InputStream = fileStream
+                InputStream = fileStream,
+                ContentType = contentType ?? GetContentType(key)
+            };
+
+            await _s3Client.PutObjectAsync(putRequest);
+            return key;
+        }
+
+        public async Task<string> UploadPsdFileAsync(Stream fileStream, string key, string fileName)
+        {
+            var putRequest = new PutObjectRequest
+            {
+                BucketName = _bucketName,
+                Key = key,
+                InputStream = fileStream,
+                ContentType = "application/octet-stream",
+                Metadata = 
+                {
+                    ["original-filename"] = fileName,
+                    ["file-type"] = "psd"
+                }
             };
 
             await _s3Client.PutObjectAsync(putRequest);
@@ -51,6 +71,20 @@ namespace LancerApi.Services
             };
 
             return _s3Client.GetPreSignedURL(request);
+        }
+
+        private string GetContentType(string key)
+        {
+            var extension = Path.GetExtension(key).ToLowerInvariant();
+            return extension switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                ".psd" => "application/octet-stream",
+                _ => "application/octet-stream"
+            };
         }
     }
 }

@@ -200,7 +200,7 @@ export default function ProductsPage() {
                 </div>
                 {products.length === 0 && (
                     <div className="text-center py-12">
-                        <p className="text-gray-500">No products found. Click "Add Product" to create one.</p>
+                        <p className="text-gray-500">No products found. Click &quot;Add Product&quot; to create one.</p>
                     </div>
                 )}
             </div>
