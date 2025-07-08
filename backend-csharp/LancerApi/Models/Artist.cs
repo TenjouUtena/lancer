@@ -27,6 +27,10 @@ namespace LancerApi.Models
         public string Url { get; set; } = string.Empty;
         public decimal Price { get; set; }
         
+        // New fields from data dictionary
+        public string OriginalPsdUrl { get; set; } = string.Empty; // Storage for original PSD
+        public string ModifiedPsdUrl { get; set; } = string.Empty; // Storage for modified PSD
+        
         // User ownership
         public string UserId { get; set; } = string.Empty;
         [ForeignKey("UserId")]

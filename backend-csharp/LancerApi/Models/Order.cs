@@ -17,14 +17,33 @@ namespace LancerApi.Models
     {
         [Key]
         public int Id { get; set; }
-        public int CustomerId { get; set; }
+        public int? CustomerId { get; set; }
         [ForeignKey("CustomerId")]
-        public Customer Customer { get; set; } = null!;
+        public Customer? Customer { get; set; }
+        
+        public int? CommissionId { get; set; }
+        [ForeignKey("CommissionId")]
+        public Commission? Commission { get; set; }
+        
         public DateTime OrderDate { get; set; } = DateTime.UtcNow;
         public DateTime? CompletedDate { get; set; }
+        
+        // New fields from data dictionary
+        public DateTime DateStarted { get; set; } = DateTime.UtcNow;
+        public DateTime DateDue { get; set; } = DateTime.UtcNow.AddDays(21); // Auto-populate +21 days
+        
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
         public string Notes { get; set; } = string.Empty;
+        public string Details { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
+        
+        // Payment and posting tracking
+        public bool Paid { get; set; } = false;
+        public bool Posted { get; set; } = false;
+        
+        // Discounts and upcharges
+        public string DiscountsAndUpcharges { get; set; } = string.Empty; // Dropdown or text field
+        
         public virtual ICollection<OrderLine> OrderLines { get; set; } = new List<OrderLine>();
         
         // User ownership

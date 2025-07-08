@@ -14,6 +14,7 @@ namespace LancerApi.Models
         // Navigation properties for user-owned entities
         public virtual ICollection<Artist> Artists { get; set; } = new List<Artist>();
         public virtual ICollection<Customer> Customers { get; set; } = new List<Customer>();
+        public virtual ICollection<Commission> Commissions { get; set; } = new List<Commission>();
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
         public virtual ICollection<Product> Products { get; set; } = new List<Product>();
         public virtual ICollection<ArtistBase> ArtistBases { get; set; } = new List<ArtistBase>();

@@ -25,6 +25,14 @@ namespace LancerApi.Models
         public string OtherPlatformName { get; set; } = string.Empty;
         public string OtherPlatformLink { get; set; } = string.Empty;
         
+        // New fields from data dictionary
+        public string FaUser { get; set; } = string.Empty;
+        public string FaLink { get; set; } = string.Empty;
+        public string PrimaryContactLocation { get; set; } = string.Empty; // Dropdown values: Discord, FurAffinity, Twitter, Instagram, Telegram, Other
+        
+        // Multi-character storage
+        public virtual ICollection<CustomerImage> CustomerImages { get; set; } = new List<CustomerImage>();
+        
         // User ownership
         public string? UserId { get; set; } = string.Empty;
         [ForeignKey("UserId")]

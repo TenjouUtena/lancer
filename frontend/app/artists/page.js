@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { NewArtist } from './newartist.js';
-import { ArtistList } from './artistlist.js';
 import { ArtistEdit } from './artistedit.js';
 import { api } from '../utils/api'
 
@@ -171,12 +170,6 @@ export default function Artists() {
                             </table>
                         </div>
                     )}
-                </div>
-
-                {/* Legacy Artist List Component */}
-                <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Legacy Top 5 View</h2>
-                    <ArtistList />
                 </div>
             </div>
 

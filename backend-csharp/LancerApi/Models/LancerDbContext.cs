@@ -15,6 +15,7 @@ namespace LancerApi.Models
         public DbSet<ArtistBaseTag> ArtistBaseTags { get; set; }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<CustomerImage> CustomerImages { get; set; }
+        public DbSet<Commission> Commissions { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderLine> OrderLines { get; set; }
@@ -52,6 +53,12 @@ namespace LancerApi.Models
                 .HasOne(o => o.User)
                 .WithMany(u => u.Orders)
                 .HasForeignKey(o => o.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Commission>()
+                .HasOne(c => c.User)
+                .WithMany(u => u.Commissions)
+                .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

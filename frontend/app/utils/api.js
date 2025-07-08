@@ -229,6 +229,15 @@ export const api = {
     delete: (id) => apiClient.delete(`/api/tags/${id}`),
   },
 
+  // Commissions
+  commissions: {
+    getAll: () => apiClient.get('/api/commissions'),
+    getById: (id) => apiClient.get(`/api/commissions/${id}`),
+    create: (commission) => apiClient.post('/api/commissions', commission),
+    update: (id, commission) => apiClient.put(`/api/commissions/${id}`, commission),
+    delete: (id) => apiClient.delete(`/api/commissions/${id}`),
+  },
+
   // Export
   export: {
     download: () => apiClient.download('/api/export'),

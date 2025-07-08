@@ -1,13 +1,21 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { api } from '../utils/api.js'
 
 export function OrderForm({ order, onClose }) {
     const [formData, setFormData] = useState({
         customerId: '',
+        commissionId: '',
         orderDate: new Date().toISOString().slice(0, 16),
+        dateStarted: new Date().toISOString().slice(0, 16),
+        dateDue: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16), // +21 days
         status: 0, // Pending
-        notes: ''
+        notes: '',
+        details: '',
+        paid: false,
+        posted: false,
+        discountsAndUpcharges: ''
     })
     const [orderLines, setOrderLines] = useState([])
     const [newOrderLine, setNewOrderLine] = useState({
@@ -22,15 +30,23 @@ export function OrderForm({ order, onClose }) {
     const [error, setError] = useState(null)
     const [customers, setCustomers] = useState([])
     const [products, setProducts] = useState([])
+    const [commissions, setCommissions] = useState([])
 
     useEffect(() => {
         fetchDropdownData()
         if (order) {
             setFormData({
                 customerId: order.customerId || '',
+                commissionId: order.commissionId || '',
                 orderDate: order.orderDate ? new Date(order.orderDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+                dateStarted: order.dateStarted ? new Date(order.dateStarted).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+                dateDue: order.dateDue ? new Date(order.dateDue).toISOString().slice(0, 16) : new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
                 status: order.status || 0,
-                notes: order.notes || ''
+                notes: order.notes || '',
+                details: order.details || '',
+                paid: order.paid || false,
+                posted: order.posted || false,
+                discountsAndUpcharges: order.discountsAndUpcharges || ''
             })
             setOrderLines(order.orderLines || [])
         }
@@ -38,20 +54,15 @@ export function OrderForm({ order, onClose }) {
 
     const fetchDropdownData = async () => {
         try {
-            const [customersRes, productsRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}customers`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}products`)
+            const [customersData, productsData, commissionsData] = await Promise.all([
+                api.customers.getAll(),
+                api.products.getAll(),
+                api.commissions.getAll()
             ])
 
-            if (customersRes.ok) {
-                const customersData = await customersRes.json()
-                setCustomers(customersData)
-            }
-
-            if (productsRes.ok) {
-                const productsData = await productsRes.json()
-                setProducts(productsData)
-            }
+            setCustomers(customersData)
+            setProducts(productsData)
+            setCommissions(commissionsData)
         } catch (err) {
             console.error('Error fetching dropdown data:', err)
         }
@@ -60,8 +71,8 @@ export function OrderForm({ order, onClose }) {
     const handleSubmit = async (e) => {
         e.preventDefault()
         
-        if (!formData.customerId) {
-            setError('Customer is required')
+        if (!formData.customerId && !formData.commissionId) {
+            setError('Either Customer or Commission is required')
             return
         }
 
@@ -71,8 +82,11 @@ export function OrderForm({ order, onClose }) {
         try {
             const payload = {
                 ...formData,
-                customerId: parseInt(formData.customerId),
+                customerId: formData.customerId ? parseInt(formData.customerId) : null,
+                commissionId: formData.commissionId ? parseInt(formData.commissionId) : null,
                 orderDate: new Date(formData.orderDate).toISOString(),
+                dateStarted: new Date(formData.dateStarted).toISOString(),
+                dateDue: new Date(formData.dateDue).toISOString(),
                 status: parseInt(formData.status),
                 orderLines: orderLines.map(line => ({
                     productId: parseInt(line.productId),
@@ -84,30 +98,13 @@ export function OrderForm({ order, onClose }) {
                 }))
             }
 
-            const url = order 
-                ? `${process.env.NEXT_PUBLIC_API_URL}orders/${order.id}`
-                : `${process.env.NEXT_PUBLIC_API_URL}orders`
-
-            const method = order ? 'PUT' : 'POST'
-
             if (order) {
                 payload.id = order.id
                 // For updates, we don't send order lines in the main payload
                 delete payload.orderLines
-            }
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            })
-
-            if (!response.ok) {
-                const errorData = await response.text()
-                throw new Error(errorData || 'Failed to save order')
+                await api.orders.update(order.id, payload)
+            } else {
+                await api.orders.create(payload)
             }
 
             onClose()
@@ -252,20 +249,39 @@ export function OrderForm({ order, onClose }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label htmlFor="customerId" className="block text-sm font-medium text-gray-700 mb-2">
-                            Customer *
+                            Customer
                         </label>
                         <select
                             id="customerId"
                             name="customerId"
                             value={formData.customerId}
                             onChange={handleChange}
-                            required
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
                         >
                             <option value="">Select a customer</option>
                             {customers.map(customer => (
                                 <option key={customer.id} value={customer.id}>
                                     {customer.name} ({customer.emailAddress})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label htmlFor="commissionId" className="block text-sm font-medium text-gray-700 mb-2">
+                            Commission
+                        </label>
+                        <select
+                            id="commissionId"
+                            name="commissionId"
+                            value={formData.commissionId}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                        >
+                            <option value="">Select a commission</option>
+                            {commissions.map(commission => (
+                                <option key={commission.id} value={commission.id}>
+                                    {commission.name} - ${commission.price}
                                 </option>
                             ))}
                         </select>
@@ -282,6 +298,34 @@ export function OrderForm({ order, onClose }) {
                             value={formData.orderDate}
                             onChange={handleChange}
                             required
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="dateStarted" className="block text-sm font-medium text-gray-700 mb-2">
+                            Date Started
+                        </label>
+                        <input
+                            type="datetime-local"
+                            id="dateStarted"
+                            name="dateStarted"
+                            value={formData.dateStarted}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="dateDue" className="block text-sm font-medium text-gray-700 mb-2">
+                            Date Due
+                        </label>
+                        <input
+                            type="datetime-local"
+                            id="dateDue"
+                            name="dateDue"
+                            value={formData.dateDue}
+                            onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
                         />
                     </div>
@@ -306,19 +350,83 @@ export function OrderForm({ order, onClose }) {
                     </div>
                 </div>
 
-                <div>
-                    <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
-                        Notes
-                    </label>
-                    <textarea
-                        id="notes"
-                        name="notes"
-                        value={formData.notes}
-                        onChange={handleChange}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
-                        placeholder="Order notes..."
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label htmlFor="discountsAndUpcharges" className="block text-sm font-medium text-gray-700 mb-2">
+                            Discounts & Upcharges
+                        </label>
+                        <input
+                            type="text"
+                            id="discountsAndUpcharges"
+                            name="discountsAndUpcharges"
+                            value={formData.discountsAndUpcharges}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                            placeholder="Enter discount/upcharge details"
+                        />
+                    </div>
+
+                    <div className="flex items-center space-x-6 pt-6">
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="paid"
+                                name="paid"
+                                checked={formData.paid}
+                                onChange={(e) => setFormData(prev => ({ ...prev, paid: e.target.checked }))}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="paid" className="ml-2 block text-sm text-gray-900">
+                                Paid
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="posted"
+                                name="posted"
+                                checked={formData.posted}
+                                onChange={(e) => setFormData(prev => ({ ...prev, posted: e.target.checked }))}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="posted" className="ml-2 block text-sm text-gray-900">
+                                Posted
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label htmlFor="details" className="block text-sm font-medium text-gray-700 mb-2">
+                            Details
+                        </label>
+                        <textarea
+                            id="details"
+                            name="details"
+                            value={formData.details}
+                            onChange={handleChange}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                            placeholder="Order details..."
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+                            Notes
+                        </label>
+                        <textarea
+                            id="notes"
+                            name="notes"
+                            value={formData.notes}
+                            onChange={handleChange}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                            placeholder="Order notes..."
+                        />
+                    </div>
                 </div>
 
                 {/* Order Lines Section */}

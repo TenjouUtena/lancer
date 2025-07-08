@@ -17,7 +17,11 @@ export function NewCustomer({ onClose }) {
         telegramName: '',
         telegramLink: '',
         otherPlatformName: '',
-        otherPlatformLink: ''
+        otherPlatformLink: '',
+        // New fields from data dictionary
+        faUser: '',
+        faLink: '',
+        primaryContactLocation: ''
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -302,6 +306,63 @@ export function NewCustomer({ onClose }) {
                                 placeholder="Enter other platform profile link"
                             />
                         </div>
+                    </div>
+                </div>
+
+                {/* New fields from data dictionary */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label htmlFor="faUser" className="block text-sm font-medium text-gray-700 mb-2">
+                                FA User
+                            </label>
+                            <input
+                                type="text"
+                                id="faUser"
+                                name="faUser"
+                                value={formData.faUser}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                                placeholder="Enter FurAffinity username"
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="faLink" className="block text-sm font-medium text-gray-700 mb-2">
+                                FA Link
+                            </label>
+                            <input
+                                type="url"
+                                id="faLink"
+                                name="faLink"
+                                value={formData.faLink}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                                placeholder="https://www.furaffinity.net/user/username"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label htmlFor="primaryContactLocation" className="block text-sm font-medium text-gray-700 mb-2">
+                            Primary Contact Location
+                        </label>
+                        <select
+                            id="primaryContactLocation"
+                            name="primaryContactLocation"
+                            value={formData.primaryContactLocation}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                        >
+                            <option value="">Select primary contact method</option>
+                            <option value="Discord">Discord</option>
+                            <option value="FurAffinity">FurAffinity</option>
+                            <option value="Twitter">Twitter</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="Telegram">Telegram</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
                 </div>
 

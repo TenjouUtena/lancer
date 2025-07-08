@@ -196,7 +196,9 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
     const [formData, setFormData] = useState({
         name: '',
         url: '',
-        price: 0
+        price: 0,
+        originalPsdUrl: '',
+        modifiedPsdUrl: ''
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
@@ -224,7 +226,9 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
             setFormData({
                 name: artistBase.name || '',
                 url: artistBase.url || '',
-                price: artistBase.price || 0
+                price: artistBase.price || 0,
+                originalPsdUrl: artistBase.originalPsdUrl || '',
+                modifiedPsdUrl: artistBase.modifiedPsdUrl || ''
             });
             if (artistBase.url) {
                 if (artistBase.url.startsWith('/uploads/')) {
@@ -274,6 +278,8 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
             formDataToSend.append('name', formData.name);
             formDataToSend.append('url', formData.url);
             formDataToSend.append('price', formData.price.toString());
+            formDataToSend.append('originalPsdUrl', formData.originalPsdUrl);
+            formDataToSend.append('modifiedPsdUrl', formData.modifiedPsdUrl);
             
             // Add selected tags
             selectedTags.forEach(tagId => {
@@ -389,6 +395,43 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
                         placeholder="https://example.com/image.jpg"
                     />
+                </div>
+
+                {/* PSD Storage Fields */}
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">PSD Storage</h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="originalPsdUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                                Original PSD URL
+                            </label>
+                            <input
+                                type="url"
+                                id="originalPsdUrl"
+                                name="originalPsdUrl"
+                                value={formData.originalPsdUrl}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                                placeholder="https://example.com/original.psd"
+                            />
+                        </div>
+                        
+                        <div>
+                            <label htmlFor="modifiedPsdUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                                Modified PSD URL
+                            </label>
+                            <input
+                                type="url"
+                                id="modifiedPsdUrl"
+                                name="modifiedPsdUrl"
+                                value={formData.modifiedPsdUrl}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
+                                placeholder="https://example.com/modified.psd"
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 {/* Tags Section */}
