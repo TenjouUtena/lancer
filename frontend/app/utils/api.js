@@ -220,6 +220,15 @@ export const api = {
     delete: (id) => apiClient.delete(`/api/artist-bases/${id}`),
   },
 
+  // Tags
+  tags: {
+    getAll: () => apiClient.get('/api/tags'),
+    getById: (id) => apiClient.get(`/api/tags/${id}`),
+    create: (tag) => apiClient.post('/api/tags', tag),
+    update: (id, tag) => apiClient.put(`/api/tags/${id}`, tag),
+    delete: (id) => apiClient.delete(`/api/tags/${id}`),
+  },
+
   // Export
   export: {
     download: () => apiClient.download('/api/export'),

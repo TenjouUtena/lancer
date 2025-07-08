@@ -1,6 +1,7 @@
 using LancerApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using LancerApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
@@ -13,11 +14,13 @@ namespace LancerApi.Controllers
     {
         private readonly LancerDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly S3Service _s3Service;
 
-        public ArtistBasesController(LancerDbContext context, IWebHostEnvironment environment)
+        public ArtistBasesController(LancerDbContext context, IWebHostEnvironment environment, S3Service s3Service)
         {
             _context = context;
             _environment = environment;
+            _s3Service = s3Service;
         }
 
         private string GetCurrentUserId()
@@ -39,7 +42,7 @@ namespace LancerApi.Controllers
             {
                 Id = ab.Id,
                 Name = ab.Name,
-                Url = ab.Url,
+                Url = GetAccessibleUrl(ab.Url),
                 Price = ab.Price,
                 Tags = ab.Tags.Select(abt => abt.Tag).ToList()
             }).ToList();
@@ -55,6 +58,12 @@ namespace LancerApi.Controllers
                 .Where(ab => ab.UserId == userId)
                 .Where(ab => ab.Name.Contains($"Artist{artistId}") || ab.Url.Contains($"artist/{artistId}"))
                 .ToListAsync();
+
+            foreach (var ab in artistBases)
+            {
+                ab.Url = GetAccessibleUrl(ab.Url);
+            }
+
             return Ok(artistBases);
         }
 
@@ -70,6 +79,7 @@ namespace LancerApi.Controllers
                 return NotFound();
             }
 
+            artistBase.Url = GetAccessibleUrl(artistBase.Url);
             return Ok(artistBase);
         }
 
@@ -119,26 +129,17 @@ namespace LancerApi.Controllers
                     return BadRequest("File size too large. Maximum size is 10MB.");
                 }
 
-                // Generate unique filename
-                var fileName = $"{Guid.NewGuid()}{fileExtension}";
-                var uploadsPath = Path.Combine(_environment.WebRootPath, "uploads");
-                
-                // Ensure uploads directory exists
-                if (!Directory.Exists(uploadsPath))
+                // Generate unique key
+                var key = $"user/{userId}/{Guid.NewGuid()}{fileExtension}";
+
+                // Upload to S3
+                using (var stream = model.ImageFile.OpenReadStream())
                 {
-                    Directory.CreateDirectory(uploadsPath);
+                    await _s3Service.UploadFileAsync(stream, key);
                 }
 
-                var filePath = Path.Combine(uploadsPath, fileName);
-
-                // Save file
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await model.ImageFile.CopyToAsync(stream);
-                }
-
-                // Set the URL for the uploaded image
-                imageUrl = $"/uploads/{fileName}";
+                // Set the URL to S3 key with prefix
+                imageUrl = $"s3:{key}";
             }
 
             // Create the artist base
@@ -248,36 +249,20 @@ namespace LancerApi.Controllers
                     return BadRequest("File size too large. Maximum size is 10MB.");
                 }
 
-                // Delete old file if it exists and is a local upload
-                if (!string.IsNullOrEmpty(existingArtistBase.Url) && existingArtistBase.Url.StartsWith("/uploads/"))
+                // Delete old file if exists
+                await DeleteOldImage(existingArtistBase.Url);
+
+                // Generate unique key
+                var key = $"user/{userId}/{Guid.NewGuid()}{fileExtension}";
+
+                // Upload to S3
+                using (var stream = model.ImageFile.OpenReadStream())
                 {
-                    var oldFilePath = Path.Combine(_environment.WebRootPath, existingArtistBase.Url.TrimStart('/'));
-                    if (System.IO.File.Exists(oldFilePath))
-                    {
-                        System.IO.File.Delete(oldFilePath);
-                    }
+                    await _s3Service.UploadFileAsync(stream, key);
                 }
 
-                // Generate unique filename
-                var fileName = $"{Guid.NewGuid()}{fileExtension}";
-                var uploadsPath = Path.Combine(_environment.WebRootPath, "uploads");
-                
-                // Ensure uploads directory exists
-                if (!Directory.Exists(uploadsPath))
-                {
-                    Directory.CreateDirectory(uploadsPath);
-                }
-
-                var filePath = Path.Combine(uploadsPath, fileName);
-
-                // Save file
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await model.ImageFile.CopyToAsync(stream);
-                }
-
-                // Set the URL for the uploaded image
-                imageUrl = $"/uploads/{fileName}";
+                // Set the URL to S3 key with prefix
+                imageUrl = $"s3:{key}";
             }
 
             // Update the artist base
@@ -333,20 +318,42 @@ namespace LancerApi.Controllers
                 return NotFound();
             }
 
-            // Delete associated file if it exists and is a local upload
-            if (!string.IsNullOrEmpty(artistBase.Url) && artistBase.Url.StartsWith("/uploads/"))
-            {
-                var filePath = Path.Combine(_environment.WebRootPath, artistBase.Url.TrimStart('/'));
-                if (System.IO.File.Exists(filePath))
-                {
-                    System.IO.File.Delete(filePath);
-                }
-            }
+            // Delete associated file if exists
+            await DeleteOldImage(artistBase.Url);
 
             _context.ArtistBases.Remove(artistBase);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Artist base deleted successfully" });
+        }
+
+        private string GetAccessibleUrl(string storedUrl)
+        {
+            if (storedUrl.StartsWith("s3:"))
+            {
+                var key = storedUrl.Substring(3);
+                return _s3Service.GetPresignedUrl(key, TimeSpan.FromHours(1));
+            }
+            return storedUrl;
+        }
+
+        private async Task DeleteOldImage(string storedUrl)
+        {
+            if (string.IsNullOrEmpty(storedUrl)) return;
+
+            if (storedUrl.StartsWith("s3:"))
+            {
+                var key = storedUrl.Substring(3);
+                await _s3Service.DeleteFileAsync(key);
+            }
+            else if (storedUrl.StartsWith("/uploads/"))
+            {
+                var filePath = Path.Combine(_environment.WebRootPath, storedUrl.TrimStart('/'));
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
         }
 
         private bool ArtistBaseExists(int id, string userId)

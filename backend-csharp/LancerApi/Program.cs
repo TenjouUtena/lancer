@@ -68,6 +68,7 @@ builder.Services.AddAuthorization();
 // Add custom services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ExportService>();
+builder.Services.AddScoped<S3Service>();
 
 // Add CORS
 builder.Services.AddCors(options =>

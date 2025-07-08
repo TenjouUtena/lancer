@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react';
+import { api } from '../utils/api.js'
+
 
 export const ArtistBaseManager = ({ artistId, onClose }) => {
     const [artistBases, setArtistBases] = useState([]);
@@ -12,9 +14,7 @@ export const ArtistBaseManager = ({ artistId, onClose }) => {
     const fetchArtistBases = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}artist-bases`);
-            if (!response.ok) throw new Error('Failed to fetch artist bases');
-            const data = await response.json();
+            const data = await api.artistBases.getAll();
             setArtistBases(data);
         } catch (err) {
             setError(err.message);
@@ -31,12 +31,7 @@ export const ArtistBaseManager = ({ artistId, onClose }) => {
         if (!confirm('Are you sure you want to delete this artist base?')) return;
         
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}artist-bases/${baseId}`, {
-                method: 'DELETE'
-            });
-            
-            if (!response.ok) throw new Error('Failed to delete artist base');
-            
+            await api.artistBases.delete(baseId);
             fetchArtistBases();
         } catch (err) {
             setError(err.message);
@@ -215,11 +210,8 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
     // Fetch available tags
     const fetchTags = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}tags`);
-            if (response.ok) {
-                const tags = await response.json();
-                setAvailableTags(tags);
-            }
+            const tags = await api.tags.getAll();
+            setAvailableTags(tags);
         } catch (err) {
             console.error('Failed to fetch tags:', err);
         }
@@ -292,20 +284,10 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
                 formDataToSend.append('imageFile', imageFile);
             }
 
-            const url = artistBase 
-                ? `${process.env.NEXT_PUBLIC_API_URL}artist-bases/${artistBase.id}/upload`
-                : `${process.env.NEXT_PUBLIC_API_URL}artist-bases/upload`;
-            
-            const method = artistBase ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method,
-                body: formDataToSend
-            });
-
-            if (!response.ok) {
-                const errorData = await response.text();
-                throw new Error(errorData || 'Failed to save artist base');
+            if (artistBase) {
+                await api.artistBases.updateWithImage(artistBase.id, formDataToSend);
+            } else {
+                await api.artistBases.createWithImage(formDataToSend);
             }
 
             onClose();
@@ -466,26 +448,13 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
                                         onClick={async () => {
                                             if (newTagName.trim()) {
                                                 try {
-                                                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}tags`, {
-                                                        method: 'POST',
-                                                        headers: {
-                                                            'Content-Type': 'application/json',
-                                                        },
-                                                        body: JSON.stringify({ name: newTagName.trim() })
-                                                    });
-                                                    
-                                                    if (response.ok) {
-                                                        const newTag = await response.json();
-                                                        setAvailableTags([...availableTags, newTag]);
-                                                        setSelectedTags([...selectedTags, newTag.id]);
-                                                        setNewTagName('');
-                                                        setShowNewTagForm(false);
-                                                    } else {
-                                                        const errorData = await response.json();
-                                                        setError(errorData.message || 'Failed to create tag');
-                                                    }
+                                                    const newTag = await api.tags.create({ name: newTagName.trim() });
+                                                    setAvailableTags([...availableTags, newTag]);
+                                                    setSelectedTags([...selectedTags, newTag.id]);
+                                                    setNewTagName('');
+                                                    setShowNewTagForm(false);
                                                 } catch (err) {
-                                                    setError('Failed to create tag');
+                                                    setError(err.message || 'Failed to create tag');
                                                 }
                                             }
                                         }}
