@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ProductForm } from './ProductForm'
+import { api } from '../utils/api'
 
 export default function ProductsPage() {
     const [products, setProducts] = useState([])
@@ -17,11 +18,7 @@ export default function ProductsPage() {
     const fetchProducts = async () => {
         try {
             setLoading(true)
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}products`)
-            if (!response.ok) {
-                throw new Error('Failed to fetch products')
-            }
-            const data = await response.json()
+            const data = await api.products.getAll()
             setProducts(data)
         } catch (err) {
             setError(err.message)
@@ -36,12 +33,7 @@ export default function ProductsPage() {
         }
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}products/${id}`, {
-                method: 'DELETE'
-            })
-            if (!response.ok) {
-                throw new Error('Failed to delete product')
-            }
+            await api.products.delete(id)
             await fetchProducts()
         } catch (err) {
             setError(err.message)

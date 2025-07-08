@@ -1,11 +1,14 @@
 using LancerApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace LancerApi.Controllers
 {
     [ApiController]
     [Route("api/artists")]
+    [Authorize]
     public class ArtistsController : ControllerBase
     {
         private readonly LancerDbContext _context;
@@ -15,17 +18,27 @@ namespace LancerApi.Controllers
             _context = context;
         }
 
+        private string GetCurrentUserId()
+        {
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAllArtists()
         {
-            var artists = await _context.Artists.ToListAsync();
+            var userId = GetCurrentUserId();
+            var artists = await _context.Artists
+                .Where(a => a.UserId == userId)
+                .ToListAsync();
             return Ok(artists);
         }
 
         [HttpGet("top_5")]
         public async Task<IActionResult> GetTop5Artists()
         {
+            var userId = GetCurrentUserId();
             var artists = await _context.Artists
+                .Where(a => a.UserId == userId)
                 .Take(5)
                 .ToListAsync();
 
@@ -35,7 +48,9 @@ namespace LancerApi.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetArtist(int id)
         {
-            var artist = await _context.Artists.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var artist = await _context.Artists
+                .FirstOrDefaultAsync(a => a.Id == id && a.UserId == userId);
             
             if (artist == null)
             {
@@ -48,6 +63,9 @@ namespace LancerApi.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateArtist([FromBody] Artist artist)
         {
+            artist.UserId = GetCurrentUserId();
+            artist.User = null; // Clear the navigation property to avoid validation issues
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -67,6 +85,7 @@ namespace LancerApi.Controllers
                 return BadRequest(ModelState);
             }
 
+            artist.UserId = GetCurrentUserId();
             _context.Artists.Add(artist);
             await _context.SaveChangesAsync();
 
@@ -86,7 +105,10 @@ namespace LancerApi.Controllers
                 return BadRequest(ModelState);
             }
 
-            var existingArtist = await _context.Artists.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var existingArtist = await _context.Artists
+                .FirstOrDefaultAsync(a => a.Id == id && a.UserId == userId);
+            
             if (existingArtist == null)
             {
                 return NotFound();
@@ -102,7 +124,7 @@ namespace LancerApi.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ArtistExists(id))
+                if (!ArtistExists(id, userId))
                 {
                     return NotFound();
                 }
@@ -115,7 +137,10 @@ namespace LancerApi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteArtist(int id)
         {
-            var artist = await _context.Artists.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var artist = await _context.Artists
+                .FirstOrDefaultAsync(a => a.Id == id && a.UserId == userId);
+            
             if (artist == null)
             {
                 return NotFound();
@@ -127,9 +152,9 @@ namespace LancerApi.Controllers
             return Ok(new { message = "Artist deleted successfully" });
         }
 
-        private bool ArtistExists(int id)
+        private bool ArtistExists(int id, string userId)
         {
-            return _context.Artists.Any(e => e.Id == id);
+            return _context.Artists.Any(e => e.Id == id && e.UserId == userId);
         }
     }
 }

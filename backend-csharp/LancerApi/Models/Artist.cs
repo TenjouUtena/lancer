@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace LancerApi.Models
 {
@@ -10,6 +11,12 @@ namespace LancerApi.Models
         public string Name { get; set; } = string.Empty;
         public string Faname { get; set; } = string.Empty;
         public string Platform { get; set; } = string.Empty;
+        
+        // User ownership
+        public string UserId { get; set; } = string.Empty;
+        [ForeignKey("UserId")]
+        [JsonIgnore]
+        public virtual User? User { get; set; }
     }
 
     public class ArtistBase
@@ -19,6 +26,12 @@ namespace LancerApi.Models
         public string Name { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        
+        // User ownership
+        public string UserId { get; set; } = string.Empty;
+        [ForeignKey("UserId")]
+        [JsonIgnore]
+        public virtual User? User { get; set; }
         
         // Navigation property for tags
         public virtual ICollection<ArtistBaseTag> Tags { get; set; } = new List<ArtistBaseTag>();

@@ -1,11 +1,14 @@
 using LancerApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace LancerApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ProductsController : ControllerBase
     {
         private readonly LancerDbContext _context;
@@ -15,11 +18,18 @@ namespace LancerApi.Controllers
             _context = context;
         }
 
+        private string GetCurrentUserId()
+        {
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        }
+
         // GET: api/products
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         {
+            var userId = GetCurrentUserId();
             return await _context.Products
+                .Where(p => p.UserId == userId)
                 .Include(p => p.Artist)
                 .Include(p => p.Base)
                 .Include(p => p.Ad)
@@ -30,7 +40,9 @@ namespace LancerApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Product>> GetProduct(int id)
         {
+            var userId = GetCurrentUserId();
             var product = await _context.Products
+                .Where(p => p.UserId == userId)
                 .Include(p => p.Artist)
                 .Include(p => p.Base)
                 .Include(p => p.Ad)
@@ -48,22 +60,28 @@ namespace LancerApi.Controllers
         [HttpPost]
         public async Task<ActionResult<Product>> CreateProduct(Product product)
         {
+            var userId = GetCurrentUserId();
+            product.UserId = userId;
+            product.User = null; // Clear the navigation property to avoid validation issues
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            // Verify artist exists
-            var artist = await _context.Artists.FindAsync(product.ArtistId);
+            // Verify artist exists and belongs to user
+            var artist = await _context.Artists
+                .FirstOrDefaultAsync(a => a.Id == product.ArtistId && a.UserId == userId);
             if (artist == null)
             {
                 return BadRequest("Artist not found");
             }
 
-            // Verify base exists if provided
+            // Verify base exists and belongs to user if provided
             if (product.BaseId.HasValue)
             {
-                var artistBase = await _context.ArtistBases.FindAsync(product.BaseId.Value);
+                var artistBase = await _context.ArtistBases
+                    .FirstOrDefaultAsync(ab => ab.Id == product.BaseId.Value && ab.UserId == userId);
                 if (artistBase == null)
                 {
                     return BadRequest("Artist base not found");
@@ -100,17 +118,29 @@ namespace LancerApi.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Verify artist exists
-            var artist = await _context.Artists.FindAsync(product.ArtistId);
+            var userId = GetCurrentUserId();
+
+            // Verify the product exists and belongs to user
+            var existingProduct = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+            if (existingProduct == null)
+            {
+                return NotFound();
+            }
+
+            // Verify artist exists and belongs to user
+            var artist = await _context.Artists
+                .FirstOrDefaultAsync(a => a.Id == product.ArtistId && a.UserId == userId);
             if (artist == null)
             {
                 return BadRequest("Artist not found");
             }
 
-            // Verify base exists if provided
+            // Verify base exists and belongs to user if provided
             if (product.BaseId.HasValue)
             {
-                var artistBase = await _context.ArtistBases.FindAsync(product.BaseId.Value);
+                var artistBase = await _context.ArtistBases
+                    .FirstOrDefaultAsync(ab => ab.Id == product.BaseId.Value && ab.UserId == userId);
                 if (artistBase == null)
                 {
                     return BadRequest("Artist base not found");
@@ -124,9 +154,15 @@ namespace LancerApi.Controllers
                 return BadRequest("Ad image not found");
             }
 
-            product.UpdatedDate = DateTime.UtcNow;
-
-            _context.Entry(product).State = EntityState.Modified;
+            // Update the existing product
+            existingProduct.Name = product.Name;
+            existingProduct.Description = product.Description;
+            existingProduct.ArtistId = product.ArtistId;
+            existingProduct.BaseId = product.BaseId;
+            existingProduct.AdId = product.AdId;
+            existingProduct.Price = product.Price;
+            existingProduct.IsAvailable = product.IsAvailable;
+            existingProduct.UpdatedDate = DateTime.UtcNow;
 
             try
             {
@@ -134,7 +170,7 @@ namespace LancerApi.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ProductExists(id))
+                if (!ProductExists(id, userId))
                 {
                     return NotFound();
                 }
@@ -151,7 +187,9 @@ namespace LancerApi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
-            var product = await _context.Products.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
             if (product == null)
             {
                 return NotFound();
@@ -167,7 +205,9 @@ namespace LancerApi.Controllers
         [HttpGet("artist/{artistId}")]
         public async Task<ActionResult<IEnumerable<Product>>> GetProductsByArtist(int artistId)
         {
+            var userId = GetCurrentUserId();
             return await _context.Products
+                .Where(p => p.UserId == userId)
                 .Include(p => p.Artist)
                 .Include(p => p.Base)
                 .Include(p => p.Ad)
@@ -179,7 +219,9 @@ namespace LancerApi.Controllers
         [HttpGet("available")]
         public async Task<ActionResult<IEnumerable<Product>>> GetAvailableProducts()
         {
+            var userId = GetCurrentUserId();
             return await _context.Products
+                .Where(p => p.UserId == userId)
                 .Include(p => p.Artist)
                 .Include(p => p.Base)
                 .Include(p => p.Ad)
@@ -187,9 +229,9 @@ namespace LancerApi.Controllers
                 .ToListAsync();
         }
 
-        private bool ProductExists(int id)
+        private bool ProductExists(int id, string userId)
         {
-            return _context.Products.Any(e => e.Id == id);
+            return _context.Products.Any(e => e.Id == id && e.UserId == userId);
         }
     }
 }

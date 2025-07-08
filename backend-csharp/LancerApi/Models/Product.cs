@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace LancerApi.Models
 {
@@ -22,5 +23,11 @@ namespace LancerApi.Models
         public bool IsAvailable { get; set; } = true;
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedDate { get; set; }
+        
+        // User ownership
+        public string UserId { get; set; } = string.Empty;
+        [ForeignKey("UserId")]
+        [JsonIgnore]
+        public virtual User? User { get; set; }
     }
 }

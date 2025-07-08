@@ -1,11 +1,14 @@
 using LancerApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace LancerApi.Controllers
 {
     [ApiController]
     [Route("api/artist-bases")]
+    [Authorize]
     public class ArtistBasesController : ControllerBase
     {
         private readonly LancerDbContext _context;
@@ -17,10 +20,17 @@ namespace LancerApi.Controllers
             _environment = environment;
         }
 
+        private string GetCurrentUserId()
+        {
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAllArtistBases()
         {
+            var userId = GetCurrentUserId();
             var artistBases = await _context.ArtistBases
+                .Where(ab => ab.UserId == userId)
                 .Include(ab => ab.Tags)
                 .ThenInclude(abt => abt.Tag)
                 .ToListAsync();
@@ -40,7 +50,9 @@ namespace LancerApi.Controllers
         [HttpGet("by-artist/{artistId}")]
         public async Task<IActionResult> GetArtistBasesByArtist(int artistId)
         {
+            var userId = GetCurrentUserId();
             var artistBases = await _context.ArtistBases
+                .Where(ab => ab.UserId == userId)
                 .Where(ab => ab.Name.Contains($"Artist{artistId}") || ab.Url.Contains($"artist/{artistId}"))
                 .ToListAsync();
             return Ok(artistBases);
@@ -49,7 +61,9 @@ namespace LancerApi.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetArtistBase(int id)
         {
-            var artistBase = await _context.ArtistBases.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var artistBase = await _context.ArtistBases
+                .FirstOrDefaultAsync(ab => ab.Id == id && ab.UserId == userId);
             
             if (artistBase == null)
             {
@@ -62,6 +76,9 @@ namespace LancerApi.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateArtistBase([FromBody] ArtistBase artistBase)
         {
+            artistBase.UserId = GetCurrentUserId();
+            artistBase.User = null; // Clear the navigation property to avoid validation issues
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -81,6 +98,7 @@ namespace LancerApi.Controllers
                 return BadRequest(ModelState);
             }
 
+            var userId = GetCurrentUserId();
             string? imageUrl = null;
 
             // Handle file upload if provided
@@ -128,7 +146,8 @@ namespace LancerApi.Controllers
             {
                 Name = model.Name,
                 Url = imageUrl ?? model.Url ?? string.Empty,
-                Price = model.Price
+                Price = model.Price,
+                UserId = userId
             };
 
             _context.ArtistBases.Add(artistBase);
@@ -165,7 +184,9 @@ namespace LancerApi.Controllers
                 return BadRequest(ModelState);
             }
 
-            var existingArtistBase = await _context.ArtistBases.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var existingArtistBase = await _context.ArtistBases
+                .FirstOrDefaultAsync(ab => ab.Id == id && ab.UserId == userId);
             if (existingArtistBase == null)
             {
                 return NotFound();
@@ -181,7 +202,7 @@ namespace LancerApi.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ArtistBaseExists(id))
+                if (!ArtistBaseExists(id, userId))
                 {
                     return NotFound();
                 }
@@ -199,7 +220,9 @@ namespace LancerApi.Controllers
                 return BadRequest(ModelState);
             }
 
-            var existingArtistBase = await _context.ArtistBases.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var existingArtistBase = await _context.ArtistBases
+                .FirstOrDefaultAsync(ab => ab.Id == id && ab.UserId == userId);
             if (existingArtistBase == null)
             {
                 return NotFound();
@@ -289,7 +312,7 @@ namespace LancerApi.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ArtistBaseExists(id))
+                if (!ArtistBaseExists(id, userId))
                 {
                     return NotFound();
                 }
@@ -302,7 +325,9 @@ namespace LancerApi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteArtistBase(int id)
         {
-            var artistBase = await _context.ArtistBases.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var artistBase = await _context.ArtistBases
+                .FirstOrDefaultAsync(ab => ab.Id == id && ab.UserId == userId);
             if (artistBase == null)
             {
                 return NotFound();
@@ -324,9 +349,9 @@ namespace LancerApi.Controllers
             return Ok(new { message = "Artist base deleted successfully" });
         }
 
-        private bool ArtistBaseExists(int id)
+        private bool ArtistBaseExists(int id, string userId)
         {
-            return _context.ArtistBases.Any(e => e.Id == id);
+            return _context.ArtistBases.Any(e => e.Id == id && e.UserId == userId);
         }
     }
 

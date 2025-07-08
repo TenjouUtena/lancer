@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace LancerApi.Models
 {
@@ -23,6 +24,12 @@ namespace LancerApi.Models
         public string TelegramLink { get; set; } = string.Empty;
         public string OtherPlatformName { get; set; } = string.Empty;
         public string OtherPlatformLink { get; set; } = string.Empty;
+        
+        // User ownership
+        public string? UserId { get; set; } = string.Empty;
+        [ForeignKey("UserId")]
+        [JsonIgnore]
+        public virtual User? User { get; set; }
     }
 
     public class CustomerImage

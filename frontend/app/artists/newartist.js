@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from "react"
+import { api } from '../utils/api'
 
 export function NewArtist({ onClose }) {
     const [formData, setFormData] = useState({
@@ -23,19 +24,7 @@ export function NewArtist({ onClose }) {
         setError(null);
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}artists`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to create artist');
-            }
-
+            const response = await api.artists.create(formData);
             onClose(); // Close modal and refresh parent list
         } catch (err) {
             setError(err.message);

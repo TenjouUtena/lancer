@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from "react"
-
+import { api } from "../utils/api.js"
 export function NewCustomer({ onClose }) {
     const [formData, setFormData] = useState({
         name: '',
@@ -34,19 +34,7 @@ export function NewCustomer({ onClose }) {
         setError(null);
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}customers`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to create customer');
-            }
-
+            const customer = await api.customers.create(formData);
             onClose(); // Close modal and refresh parent list
         } catch (err) {
             setError(err.message);

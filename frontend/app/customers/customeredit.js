@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from "react"
+import { api } from '../utils/api'
 
 export function CustomerEdit({ customer, onClose }) {
     const [formData, setFormData] = useState({
@@ -35,19 +36,7 @@ export function CustomerEdit({ customer, onClose }) {
         setError(null);
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}customers/${formData.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update customer');
-            }
-
+            const response = await api.customers.update(formData.id, formData);
             onClose(); // Close modal and refresh parent list
         } catch (err) {
             setError(err.message);

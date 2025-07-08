@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react';
- 
+import { api } from '../utils/api' 
+
 export const ArtistList = ({ onEdit, onDelete }) => {
     const [artists, setArtists] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -10,9 +11,7 @@ export const ArtistList = ({ onEdit, onDelete }) => {
     const fetchArtists = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}artists/top_5`);
-            if (!response.ok) throw new Error('Failed to fetch artists');
-            const data = await response.json();
+            const data = await api.artists.getTop5();
             setArtists(data);
         } catch (err) {
             setError(err.message);

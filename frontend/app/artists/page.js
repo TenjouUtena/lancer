@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { NewArtist } from './newartist.js';
 import { ArtistList } from './artistlist.js';
 import { ArtistEdit } from './artistedit.js';
+import { api } from '../utils/api'
 
 export default function Artists() {
     const [showNew, setShowNew] = useState(false);
@@ -17,9 +18,7 @@ export default function Artists() {
     const fetchArtists = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}artists`);
-            if (!response.ok) throw new Error('Failed to fetch artists');
-            const data = await response.json();
+            const data = await api.artists.getAll();
             setArtists(data);
         } catch (err) {
             setError(err.message);
@@ -45,11 +44,7 @@ export default function Artists() {
         if (!confirm('Are you sure you want to delete this artist?')) return;
         
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}artists/${artistId}`, {
-                method: 'DELETE'
-            });
-            
-            if (!response.ok) throw new Error('Failed to delete artist');
+            await api.artists.delete(artistId);
             
             // Refresh the list
             fetchArtists();

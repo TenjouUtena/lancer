@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { api } from '../utils/api'
 
 export function ProductForm({ product, onClose }) {
     const [formData, setFormData] = useState({
@@ -35,26 +36,13 @@ export function ProductForm({ product, onClose }) {
 
     const fetchDropdownData = async () => {
         try {
-            const [artistsRes, basesRes, imagesRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}artists`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}artistbases`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}images`)
+            const [artistsData, basesData] = await Promise.all([
+                api.artists.getAll(),
+                api.artistBases.getAll()
             ])
 
-            if (artistsRes.ok) {
-                const artistsData = await artistsRes.json()
-                setArtists(artistsData)
-            }
-
-            if (basesRes.ok) {
-                const basesData = await basesRes.json()
-                setBases(basesData)
-            }
-
-            if (imagesRes.ok) {
-                const imagesData = await imagesRes.json()
-                setImages(imagesData)
-            }
+            setArtists(artistsData)
+            setBases(basesData)
         } catch (err) {
             console.error('Error fetching dropdown data:', err)
         }

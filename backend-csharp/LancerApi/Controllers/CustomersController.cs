@@ -1,15 +1,21 @@
+using System.Security.Claims;
 using LancerApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LancerApi.Controllers
 {
     [ApiController]
     [Route("api/customers")]
+    [Authorize]
     public class CustomersController : ControllerBase
     {
         private readonly LancerDbContext _context;
-
+        private string GetCurrentUserId()
+        {
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        }
         public CustomersController(LancerDbContext context)
         {
             _context = context;
@@ -18,14 +24,19 @@ namespace LancerApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllCustomers()
         {
-            var customers = await _context.Customers.ToListAsync();
+            var userId = GetCurrentUserId();
+            var customers = await _context.Customers
+                .Where(c => c.UserId == userId)
+                .ToListAsync();
             return Ok(customers);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCustomer(int id)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var customer = await _context.Customers
+                .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
             
             if (customer == null)
             {
@@ -38,6 +49,10 @@ namespace LancerApi.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateCustomer([FromBody] Customer customer)
         {
+            var userId = GetCurrentUserId();
+            customer.UserId = userId;
+            customer.User = null; // Clear the navigation property to avoid validation issues
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { NewCustomer } from './newcustomer.js';
 import { CustomerEdit } from './customeredit.js';
+import { api } from '../utils/api.js'
+
 
 export default function Customers() {
     const [showNew, setShowNew] = useState(false);
@@ -16,9 +18,7 @@ export default function Customers() {
     const fetchCustomers = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}customers`);
-            if (!response.ok) throw new Error('Failed to fetch customers');
-            const data = await response.json();
+            const data = await api.customers.getAll()
             setCustomers(data);
         } catch (err) {
             setError(err.message);
@@ -44,11 +44,7 @@ export default function Customers() {
         if (!confirm('Are you sure you want to delete this customer?')) return;
         
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}customers/${customerId}`, {
-                method: 'DELETE'
-            });
-            
-            if (!response.ok) throw new Error('Failed to delete customer');
+            await api.customers.delete(customerId);
             
             // Refresh the list
             fetchCustomers();

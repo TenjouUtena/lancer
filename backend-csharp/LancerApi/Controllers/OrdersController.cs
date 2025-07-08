@@ -1,11 +1,14 @@
 using LancerApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace LancerApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class OrdersController : ControllerBase
     {
         private readonly LancerDbContext _context;
@@ -15,11 +18,18 @@ namespace LancerApi.Controllers
             _context = context;
         }
 
+        private string GetCurrentUserId()
+        {
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        }
+
         // GET: api/orders
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
         {
+            var userId = GetCurrentUserId();
             return await _context.Orders
+                .Where(o => o.UserId == userId)
                 .Include(o => o.Customer)
                 .Include(o => o.OrderLines)
                     .ThenInclude(ol => ol.Product)
@@ -32,7 +42,9 @@ namespace LancerApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Order>> GetOrder(int id)
         {
+            var userId = GetCurrentUserId();
             var order = await _context.Orders
+                .Where(o => o.UserId == userId)
                 .Include(o => o.Customer)
                 .Include(o => o.OrderLines)
                     .ThenInclude(ol => ol.Product)
@@ -54,7 +66,9 @@ namespace LancerApi.Controllers
         [HttpGet("top_5")]
         public async Task<ActionResult<IEnumerable<Order>>> GetTopOrders()
         {
+            var userId = GetCurrentUserId();
             return await _context.Orders
+                .Where(o => o.UserId == userId)
                 .Include(o => o.Customer)
                 .Include(o => o.OrderLines)
                     .ThenInclude(ol => ol.Product)
@@ -74,8 +88,11 @@ namespace LancerApi.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Verify customer exists
-            var customer = await _context.Customers.FindAsync(orderDto.CustomerId);
+            var userId = GetCurrentUserId();
+
+            // Verify customer exists and belongs to user
+            var customer = await _context.Customers
+                .FirstOrDefaultAsync(c => c.Id == orderDto.CustomerId && c.UserId == userId);
             if (customer == null)
             {
                 return BadRequest("Customer not found");
@@ -87,7 +104,8 @@ namespace LancerApi.Controllers
                 OrderDate = orderDto.OrderDate,
                 Status = orderDto.Status,
                 Notes = orderDto.Notes ?? string.Empty,
-                TotalAmount = 0 // Will be calculated from order lines
+                TotalAmount = 0, // Will be calculated from order lines
+                UserId = userId
             };
 
             _context.Orders.Add(order);
@@ -99,8 +117,9 @@ namespace LancerApi.Controllers
                 decimal totalAmount = 0;
                 foreach (var lineDto in orderDto.OrderLines)
                 {
-                    // Verify product exists
-                    var product = await _context.Products.FindAsync(lineDto.ProductId);
+                    // Verify product exists and belongs to user
+                    var product = await _context.Products
+                        .FirstOrDefaultAsync(p => p.Id == lineDto.ProductId && p.UserId == userId);
                     if (product == null)
                     {
                         return BadRequest($"Product with ID {lineDto.ProductId} not found");
@@ -145,16 +164,19 @@ namespace LancerApi.Controllers
                 return BadRequest(ModelState);
             }
 
-            var order = await _context.Orders.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var order = await _context.Orders
+                .FirstOrDefaultAsync(o => o.Id == id && o.UserId == userId);
             if (order == null)
             {
                 return NotFound();
             }
 
-            // Verify customer exists if changed
+            // Verify customer exists and belongs to user if changed
             if (order.CustomerId != orderDto.CustomerId)
             {
-                var customer = await _context.Customers.FindAsync(orderDto.CustomerId);
+                var customer = await _context.Customers
+                    .FirstOrDefaultAsync(c => c.Id == orderDto.CustomerId && c.UserId == userId);
                 if (customer == null)
                 {
                     return BadRequest("Customer not found");
@@ -180,7 +202,7 @@ namespace LancerApi.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!OrderExists(id))
+                if (!OrderExists(id, userId))
                 {
                     return NotFound();
                 }
@@ -197,9 +219,10 @@ namespace LancerApi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
+            var userId = GetCurrentUserId();
             var order = await _context.Orders
                 .Include(o => o.OrderLines)
-                .FirstOrDefaultAsync(o => o.Id == id);
+                .FirstOrDefaultAsync(o => o.Id == id && o.UserId == userId);
             
             if (order == null)
             {
@@ -218,7 +241,9 @@ namespace LancerApi.Controllers
         [HttpGet("customer/{customerId}")]
         public async Task<ActionResult<IEnumerable<Order>>> GetOrdersByCustomer(int customerId)
         {
+            var userId = GetCurrentUserId();
             return await _context.Orders
+                .Where(o => o.UserId == userId)
                 .Include(o => o.Customer)
                 .Include(o => o.OrderLines)
                     .ThenInclude(ol => ol.Product)
@@ -232,7 +257,9 @@ namespace LancerApi.Controllers
         [HttpGet("status/{status}")]
         public async Task<ActionResult<IEnumerable<Order>>> GetOrdersByStatus(OrderStatus status)
         {
+            var userId = GetCurrentUserId();
             return await _context.Orders
+                .Where(o => o.UserId == userId)
                 .Include(o => o.Customer)
                 .Include(o => o.OrderLines)
                     .ThenInclude(ol => ol.Product)
@@ -242,9 +269,9 @@ namespace LancerApi.Controllers
                 .ToListAsync();
         }
 
-        private bool OrderExists(int id)
+        private bool OrderExists(int id, string userId)
         {
-            return _context.Orders.Any(e => e.Id == id);
+            return _context.Orders.Any(e => e.Id == id && e.UserId == userId);
         }
     }
 

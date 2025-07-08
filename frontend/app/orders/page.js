@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { OrderForm } from './OrderForm'
 import { OrderDetails } from './OrderDetails'
+import { api } from '../utils/api'
 
 export default function OrdersPage() {
     const [orders, setOrders] = useState([])
@@ -21,11 +22,7 @@ export default function OrdersPage() {
     const fetchOrders = async () => {
         try {
             setLoading(true)
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}orders`)
-            if (!response.ok) {
-                throw new Error('Failed to fetch orders')
-            }
-            const data = await response.json()
+            const data = await api.orders.getAll()
             setOrders(data)
         } catch (err) {
             setError(err.message)
@@ -40,12 +37,7 @@ export default function OrdersPage() {
         }
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}orders/${id}`, {
-                method: 'DELETE'
-            })
-            if (!response.ok) {
-                throw new Error('Failed to delete order')
-            }
+            await api.orders.delete(id)
             await fetchOrders()
         } catch (err) {
             setError(err.message)
