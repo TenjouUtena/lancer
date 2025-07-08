@@ -80,6 +80,45 @@ class ApiClient {
     return this.request(endpoint, { method: 'DELETE' });
   }
 
+  // Download file (for endpoints that return files)
+  async download(endpoint) {
+    const url = `${this.baseURL}${endpoint}`;
+    const token = this.getAuthToken();
+
+    const config = {
+      method: 'GET',
+      headers: {},
+    };
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(url, config);
+
+      if (response.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
+        throw new Error('Unauthorized');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      // Return the blob for file downloads
+      return await response.blob();
+    } catch (error) {
+      console.error('API download failed:', error);
+      throw error;
+    }
+  }
+
   // POST with FormData (for file uploads)
   async postFormData(endpoint, formData) {
     const token = this.getAuthToken();
@@ -179,6 +218,11 @@ export const api = {
     update: (id, artistBase) => apiClient.put(`/api/artist-bases/${id}`, artistBase),
     updateWithImage: (id, formData) => apiClient.postFormData(`/api/artist-bases/${id}/upload`, formData),
     delete: (id) => apiClient.delete(`/api/artist-bases/${id}`),
+  },
+
+  // Export
+  export: {
+    download: () => apiClient.download('/api/export'),
   },
 };
 
