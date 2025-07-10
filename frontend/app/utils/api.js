@@ -213,6 +213,14 @@ export const api = {
     getAll: () => apiClient.get('/api/artist-bases'),
     getById: (id) => apiClient.get(`/api/artist-bases/${id}`),
     getByArtist: (artistId) => apiClient.get(`/api/artist-bases/by-artist/${artistId}`),
+    search: (params) => {
+      const queryParams = new URLSearchParams();
+      if (params.name) queryParams.append('name', params.name);
+      if (params.tags && params.tags.length > 0) queryParams.append('tags', params.tags.join(','));
+      if (params.minPrice !== undefined && params.minPrice !== null) queryParams.append('minPrice', params.minPrice.toString());
+      if (params.maxPrice !== undefined && params.maxPrice !== null) queryParams.append('maxPrice', params.maxPrice.toString());
+      return apiClient.get(`/api/artist-bases/search?${queryParams.toString()}`);
+    },
     create: (artistBase) => apiClient.post('/api/artist-bases', artistBase),
     createWithImage: (formData) => apiClient.postFormData('/api/artist-bases/upload', formData),
     update: (id, artistBase) => apiClient.put(`/api/artist-bases/${id}`, artistBase),

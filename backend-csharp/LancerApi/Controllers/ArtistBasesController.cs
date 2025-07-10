@@ -50,6 +50,67 @@ namespace LancerApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchArtistBases(
+            [FromQuery] string? name = null,
+            [FromQuery] string? tags = null,
+            [FromQuery] decimal? minPrice = null,
+            [FromQuery] decimal? maxPrice = null)
+        {
+            var userId = GetCurrentUserId();
+            var query = _context.ArtistBases
+                .Where(ab => ab.UserId == userId)
+                .Include(ab => ab.Tags)
+                .ThenInclude(abt => abt.Tag)
+                .AsQueryable();
+
+            // Filter by name if provided
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                query = query.Where(ab => ab.Name.ToLower().Contains(name.ToLower()));
+            }
+
+            // Filter by price range if provided
+            if (minPrice.HasValue)
+            {
+                query = query.Where(ab => ab.Price >= minPrice.Value);
+            }
+
+            if (maxPrice.HasValue)
+            {
+                query = query.Where(ab => ab.Price <= maxPrice.Value);
+            }
+
+            // Filter by tags if provided
+            if (!string.IsNullOrWhiteSpace(tags))
+            {
+                var tagIds = tags.Split(',')
+                    .Where(t => int.TryParse(t.Trim(), out _))
+                    .Select(t => int.Parse(t.Trim()))
+                    .ToList();
+
+                if (tagIds.Any())
+                {
+                    // Find artist bases that have ALL specified tags (AND logic)
+                    query = query.Where(ab => tagIds.All(tagId => 
+                        ab.Tags.Any(abt => abt.TagId == tagId)));
+                }
+            }
+
+            var artistBases = await query.ToListAsync();
+            
+            var result = artistBases.Select(ab => new ArtistBaseWithTagsDto
+            {
+                Id = ab.Id,
+                Name = ab.Name,
+                Url = GetAccessibleUrl(ab.Url),
+                Price = ab.Price,
+                Tags = ab.Tags.Select(abt => abt.Tag).ToList()
+            }).ToList();
+            
+            return Ok(result);
+        }
+
         [HttpGet("by-artist/{artistId}")]
         public async Task<IActionResult> GetArtistBasesByArtist(int artistId)
         {
