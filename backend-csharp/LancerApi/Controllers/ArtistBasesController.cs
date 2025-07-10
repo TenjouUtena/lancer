@@ -44,6 +44,7 @@ namespace LancerApi.Controllers
                 Name = ab.Name,
                 Url = GetAccessibleUrl(ab.Url),
                 Price = ab.Price,
+                ArtistId = ab.ArtistId,
                 Tags = ab.Tags.Select(abt => abt.Tag).ToList()
             }).ToList();
             
@@ -105,6 +106,7 @@ namespace LancerApi.Controllers
                 Name = ab.Name,
                 Url = GetAccessibleUrl(ab.Url),
                 Price = ab.Price,
+                ArtistId = ab.ArtistId,
                 Tags = ab.Tags.Select(abt => abt.Tag).ToList()
             }).ToList();
             
@@ -117,15 +119,22 @@ namespace LancerApi.Controllers
             var userId = GetCurrentUserId();
             var artistBases = await _context.ArtistBases
                 .Where(ab => ab.UserId == userId)
-                .Where(ab => ab.Name.Contains($"Artist{artistId}") || ab.Url.Contains($"artist/{artistId}"))
+                .Where(ab => ab.ArtistId == artistId)
+                .Include(ab => ab.Tags)
+                .ThenInclude(abt => abt.Tag)
                 .ToListAsync();
-
-            foreach (var ab in artistBases)
+            
+            var result = artistBases.Select(ab => new ArtistBaseWithTagsDto
             {
-                ab.Url = GetAccessibleUrl(ab.Url);
-            }
-
-            return Ok(artistBases);
+                Id = ab.Id,
+                Name = ab.Name,
+                Url = GetAccessibleUrl(ab.Url),
+                Price = ab.Price,
+                ArtistId = ab.ArtistId,
+                Tags = ab.Tags.Select(abt => abt.Tag).ToList()
+            }).ToList();
+            
+            return Ok(result);
         }
 
         [HttpGet("{id}")]
@@ -225,6 +234,7 @@ namespace LancerApi.Controllers
                 Name = model.Name,
                 Url = imageUrl ?? model.Url ?? string.Empty,
                 Price = model.Price,
+                ArtistId = model.ArtistId,
                 OriginalPsdUrl = originalPsdUrl ?? model.OriginalPsdUrl ?? string.Empty,
                 ModifiedPsdUrl = modifiedPsdUrl ?? model.ModifiedPsdUrl ?? string.Empty,
                 OriginalPsdFileName = originalPsdFileName,
@@ -384,6 +394,7 @@ namespace LancerApi.Controllers
             existingArtistBase.Name = model.Name;
             existingArtistBase.Url = imageUrl ?? model.Url ?? existingArtistBase.Url;
             existingArtistBase.Price = model.Price;
+            existingArtistBase.ArtistId = model.ArtistId ?? existingArtistBase.ArtistId;
             existingArtistBase.OriginalPsdUrl = originalPsdUrl ?? model.OriginalPsdUrl ?? existingArtistBase.OriginalPsdUrl;
             existingArtistBase.ModifiedPsdUrl = modifiedPsdUrl ?? model.ModifiedPsdUrl ?? existingArtistBase.ModifiedPsdUrl;
             existingArtistBase.OriginalPsdFileName = originalPsdFileName;
@@ -560,6 +571,7 @@ namespace LancerApi.Controllers
         public string Name { get; set; } = string.Empty;
         public string? Url { get; set; }
         public decimal Price { get; set; }
+        public int? ArtistId { get; set; }
         public IFormFile? ImageFile { get; set; }
         public IFormFile? OriginalPsdFile { get; set; }
         public IFormFile? ModifiedPsdFile { get; set; }
@@ -574,6 +586,7 @@ namespace LancerApi.Controllers
         public string Name { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        public int? ArtistId { get; set; }
         public List<ArtistBaseTagSet> Tags { get; set; } = new List<ArtistBaseTagSet>();
     }
 

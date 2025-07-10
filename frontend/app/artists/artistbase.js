@@ -14,7 +14,7 @@ export const ArtistBaseManager = ({ artistId, onClose }) => {
     const fetchArtistBases = async () => {
         try {
             setLoading(true);
-            const data = await api.artistBases.getAll();
+            const data = await api.artistBases.getByArtist(artistId);
             setArtistBases(data);
         } catch (err) {
             setError(err.message);
@@ -175,7 +175,7 @@ export const ArtistBaseManager = ({ artistId, onClose }) => {
             {showNew && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-                        <ArtistBaseForm onClose={handleCloseModals} />
+                        <ArtistBaseForm artistId={artistId} onClose={handleCloseModals} />
                     </div>
                 </div>
             )}
@@ -184,7 +184,7 @@ export const ArtistBaseManager = ({ artistId, onClose }) => {
             {editingBase && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-                        <ArtistBaseForm artistBase={editingBase} onClose={handleCloseModals} />
+                        <ArtistBaseForm artistBase={editingBase} artistId={artistId} onClose={handleCloseModals} />
                     </div>
                 </div>
             )}
@@ -192,11 +192,12 @@ export const ArtistBaseManager = ({ artistId, onClose }) => {
     );
 };
 
-export const ArtistBaseForm = ({ artistBase, onClose }) => {
+export const ArtistBaseForm = ({ artistBase, artistId, onClose }) => {
     const [formData, setFormData] = useState({
         name: '',
         url: '',
         price: 0,
+        artistId: null,
         originalPsdUrl: '',
         modifiedPsdUrl: ''
     });
@@ -229,6 +230,7 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
                 name: artistBase.name || '',
                 url: artistBase.url || '',
                 price: artistBase.price || 0,
+                artistId: artistBase.artistId || null,
                 originalPsdUrl: artistBase.originalPsdUrl || '',
                 modifiedPsdUrl: artistBase.modifiedPsdUrl || ''
             });
@@ -243,8 +245,17 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
             if (artistBase.tags) {
                 setSelectedTags(artistBase.tags.map(tag => tag.id));
             }
+        } else {
+            setFormData({
+                name: '',
+                url: '',
+                price: 0,
+                artistId: artistId || null,
+                originalPsdUrl: '',
+                modifiedPsdUrl: ''
+            });
         }
-    }, [artistBase]);
+    }, [artistBase, artistId]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -280,6 +291,7 @@ export const ArtistBaseForm = ({ artistBase, onClose }) => {
             formDataToSend.append('name', formData.name);
             formDataToSend.append('url', formData.url);
             formDataToSend.append('price', formData.price.toString());
+            formDataToSend.append('artistId', formData.artistId ? formData.artistId.toString() : '');
             formDataToSend.append('originalPsdUrl', formData.originalPsdUrl);
             formDataToSend.append('modifiedPsdUrl', formData.modifiedPsdUrl);
             

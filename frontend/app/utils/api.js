@@ -152,6 +152,40 @@ class ApiClient {
 
     return await response.json();
   }
+
+  // PUT with FormData (for file updates)
+  async putFormData(endpoint, formData) {
+    const token = this.getAuthToken();
+    const config = {
+      method: 'PUT',
+      body: formData,
+    };
+
+    if (token) {
+      config.headers = {
+        Authorization: `Bearer ${token}`,
+      };
+    }
+
+    const url = `${this.baseURL}${endpoint}`;
+    const response = await fetch(url, config);
+
+    if (response.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+      throw new Error('Unauthorized');
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
 }
 
 // Create a singleton instance
@@ -224,7 +258,7 @@ export const api = {
     create: (artistBase) => apiClient.post('/api/artist-bases', artistBase),
     createWithImage: (formData) => apiClient.postFormData('/api/artist-bases/upload', formData),
     update: (id, artistBase) => apiClient.put(`/api/artist-bases/${id}`, artistBase),
-    updateWithImage: (id, formData) => apiClient.postFormData(`/api/artist-bases/${id}/upload`, formData),
+    updateWithImage: (id, formData) => apiClient.putFormData(`/api/artist-bases/${id}/upload`, formData),
     delete: (id) => apiClient.delete(`/api/artist-bases/${id}`),
   },
 

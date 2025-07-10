@@ -17,6 +17,8 @@ namespace LancerApi.Models
         [ForeignKey("UserId")]
         [JsonIgnore]
         public virtual User? User { get; set; }
+
+        public virtual ICollection<ArtistBase> ArtistBases { get; set; } = new List<ArtistBase>();
     }
 
     public class ArtistBase
@@ -26,6 +28,10 @@ namespace LancerApi.Models
         public string Name { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
         public decimal Price { get; set; }
+
+        public int? ArtistId { get; set; }
+        [ForeignKey("ArtistId")]
+        public virtual Artist? Artist { get; set; }
         
         // PSD file storage - URLs for backward compatibility
         public string OriginalPsdUrl { get; set; } = string.Empty; // Storage for original PSD
@@ -42,7 +48,7 @@ namespace LancerApi.Models
         [ForeignKey("UserId")]
         [JsonIgnore]
         public virtual User? User { get; set; }
-        
+
         // Navigation property for tags
         public virtual ICollection<ArtistBaseTag> Tags { get; set; } = new List<ArtistBaseTag>();
     }
@@ -60,6 +66,7 @@ namespace LancerApi.Models
         public int Id { get; set; }
         public int ArtistBaseId { get; set; }
         [ForeignKey("ArtistBaseId")]
+        [JsonIgnore]
         public ArtistBase ArtistBase { get; set; } = null!;
         public int TagId { get; set; }
         [ForeignKey("TagId")]

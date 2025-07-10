@@ -60,6 +60,12 @@ namespace LancerApi.Models
                 .WithMany(u => u.Commissions)
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ArtistBase>()
+                .HasOne(ab => ab.Artist)
+                .WithMany(a => a.ArtistBases)
+                .HasForeignKey(ab => ab.ArtistId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

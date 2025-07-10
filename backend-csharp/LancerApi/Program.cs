@@ -21,7 +21,7 @@ builder.Services.AddSwaggerGen();
 
 // Add DbContext
 builder.Services.AddDbContext<LancerDbContext>(options =>
-    options.UseSqlite("Data Source=lancer.db"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add Identity
 builder.Services.AddIdentity<User, IdentityRole>(options =>
