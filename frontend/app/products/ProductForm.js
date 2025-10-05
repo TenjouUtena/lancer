@@ -61,10 +61,6 @@ export function ProductForm({ product, onClose }) {
             return
         }
 
-        if (!formData.adId) {
-            setError('Ad image is required')
-            return
-        }
 
         if (!formData.price || formData.price <= 0) {
             setError('Valid price is required')
@@ -80,7 +76,7 @@ export function ProductForm({ product, onClose }) {
                 price: parseFloat(formData.price),
                 artistId: parseInt(formData.artistId),
                 baseId: formData.baseId ? parseInt(formData.baseId) : null,
-                adId: parseInt(formData.adId)
+                adId: formData.adId ? parseInt(formData.adId) : null
             }
 
             const url = product 
@@ -232,14 +228,13 @@ export function ProductForm({ product, onClose }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="adId" className="block text-sm font-medium text-gray-700 mb-2">
-                            Ad Image *
+                            Ad Image (Optional)
                         </label>
                         <select
                             id="adId"
                             name="adId"
                             value={formData.adId}
                             onChange={handleChange}
-                            required
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-150"
                         >
                             <option value="">Select an image</option>
